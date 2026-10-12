@@ -12,16 +12,16 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Odeth"/>
   <Description DefaultValue="AI accounting assistant for Excel"/>
-  <IconUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-80.png"/>
-  <SupportUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/"/>
+  <IconUrl DefaultValue="hhttps://eleprim.github.io/odeth-excel/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="hhttps://eleprim.github.io/odeth-excel/icon-80.png"/>
+  <SupportUrl DefaultValue="https://eleprim.github.io/odeth-excel/"/>
 
   <Hosts>
     <Host Name="Workbook"/>
   </Hosts>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://YOURUSER.github.io/odeth-excel/index.html"/>
+    <SourceLocation DefaultValue="https://eleprim.github.io/odeth-excel/index.html"/>
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -64,12 +64,12 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-16.png"/>
-        <bt:Image id="Icon.32" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-32.png"/>
-        <bt:Image id="Icon.80" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-80.png"/>
+        <bt:Image id="Icon.16" DefaultValue="https://eleprim.github.io/odeth-excel/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://eleprim.github.io/odeth-excel/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://eleprim.github.io/odeth-excel/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://YOURUSER.github.io/odeth-excel/index.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://eleprim.github.io/odeth-excel/index.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="Odeth"/>
