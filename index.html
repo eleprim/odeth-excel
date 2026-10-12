@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odeth</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:13px Segoe UI,Arial,sans-serif;background:#0f1115;color:#eef1f5;height:100vh;overflow:hidden}
+.app{height:100vh;display:flex;flex-direction:column}
+.top{padding:10px 14px;border-bottom:1px solid #262b35;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:700;font-size:16px}
+.top button{background:none;color:#9aa3b2;border:1px solid #303745;padding:3px 9px;font-weight:400}
+.cfg{padding:10px 14px;border-bottom:1px solid #262b35;background:#151922}
+.cfg input{width:100%;margin:4px 0;padding:7px;border:1px solid #303745;border-radius:8px;background:#0f1115;color:#fff}
+.cfg label{font-size:11px;color:#9aa3b2}
+.chat{flex:1;overflow:auto;padding:12px}
+.msg{padding:9px 10px;border-radius:12px;margin:7px 0;white-space:pre-wrap;line-height:1.4;word-wrap:break-word}
+.me{background:#242a35;margin-left:24px}
+.ai{background:#171b22;margin-right:8px}
+.acts{font:11px Consolas,monospace;background:#0b0d11;border:1px solid #262b35;border-radius:8px;padding:8px;margin-top:8px;max-height:160px;overflow:auto;white-space:pre-wrap;color:#b8c0cc}
+.composer{border-top:1px solid #262b35;padding:10px;display:flex;gap:8px}
+textarea{flex:1;resize:none;height:54px;border:1px solid #303745;border-radius:10px;background:#151922;color:#fff;padding:9px;font:inherit}
+button{border:0;border-radius:10px;padding:0 14px;background:#f0f2f5;color:#111;font-weight:700;cursor:pointer}
+.apply{margin-top:8px;height:32px;background:#7CFC9A}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">Odeth</div>
+    <button onclick="toggleCfg()">Settings</button>
+  </div>
+  <div class="cfg hidden" id="cfg">
+    <label>Groq API key</label>
+    <input id="key" type="password" placeholder="gsk_...">
+    <label>Model</label>
+    <input id="model" value="llama-3.3-70b-versatile">
+    <button style="height:30px;margin-top:6px" onclick="saveCfg()">Save</button>
+  </div>
+  <div class="chat" id="chat">
+    <div class="msg ai">Ask about this workbook, accounting, or changes you want prepared. I read the active sheet (A1:T60) and your selection.</div>
+  </div>
+  <div class="composer">
+    <textarea id="q" placeholder="Ask Odeth…"></textarea>
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+var API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+var history = [];
+var $ = function (id) { return document.getElementById(id); };
+
+var SYS = [
+  'You are Odeth, an AI accounting assistant inside Excel.',
+  'Help with journal entries, adjusting entries, transaction classification, reconciliations, trial balances, AR/AP aging, financial statements, closing work, error checking, GAAP/IFRS, and spreadsheet prep.',
+  'You get sheet context as Cell: value pairs (formulas shown as formulas), the selection, and sheet names. Use nearby labels and coordinates to understand the layout.',
+  'Be concise. Do not invent missing balances, dates, tax rates or account names; ask or state the assumption. Prefer balanced double-entry and flag unbalanced journals.',
+  'If the user only asks a question, answer in plain text with NO action lines.',
+  'To change the workbook, output action lines, one per line, no markdown, no code fences:',
+  'SET|Sheet|Cell|Value   (Sheet empty = active sheet; Value starting with = is a formula; use formulas for derived figures, raw values only for inputs)',
+  'TABLE|Sheet|TopLeftCell|[["a","b"],["c",1]]   (JSON 2D array, rectangular, strings starting with = are formulas; use for new layouts)',
+  'FORMAT|Sheet|Range|Bold(1/0/empty)|FillHex(#RRGGBB or empty)|NumberFormat(or empty)',
+  'AUTOFIT|Sheet|Range',
+  'SHEET|create|Name   or   SHEET|switch|Name',
+  'Never use the | character inside values. Never claim changes are done; the user must click Apply.'
+].join(' ');
+
+function toggleCfg() { $('cfg').classList.toggle('hidden'); }
+
+function saveCfg() {
+  var k = $('key').value.trim();
+  if (k) localStorage.setItem('odethKey', k);
+  localStorage.setItem('odethModel', $('model').value.trim() || 'llama-3.3-70b-versatile');
+  $('key').value = '';
+  $('cfg').classList.add('hidden');
+  add('Saved.', 'ai');
+}
+
+function add(t, c) {
+  var d = document.createElement('div');
+  d.className = 'msg ' + c;
+  d.textContent = t;
+  $('chat').appendChild(d);
+  $('chat').scrollTop = $('chat').scrollHeight;
+  return d;
+}
+
+function colName(i) { return String.fromCharCode(65 + i); }
+
+async function getContext() {
+  return Excel.run(async function (ctx) {
+    var wb = ctx.workbook;
+    var ws = wb.worksheets.getActiveWorksheet();
+    var sel = wb.getSelectedRange();
+    wb.worksheets.load('items/name');
+    ws.load('name');
+    sel.load('address');
+    var rng = ws.getRange('A1:T60');
+    rng.load('formulas');
+    await ctx.sync();
+    var s = 'Active sheet: ' + ws.name + '\nSelection: ' + sel.address + '\nSheets: ' +
+      wb.worksheets.items.map(function (x) { return x.name; }).join('; ') + '\n';
+    var n = 0;
+    rng.formulas.forEach(function (row, r) {
+      row.forEach(function (v, c) {
+        if (v !== '' && n < 800) { s += colName(c) + (r + 1) + ': ' + v + '\n'; n++; }
+      });
+    });
+    return s;
+  });
+}
+
+async function send() {
+  var q = $('q').value.trim();
+  if (!q) return;
+  var key = localStorage.getItem('odethKey');
+  if (!key) { $('cfg').classList.remove('hidden'); return; }
+  $('q').value = '';
+  add(q, 'me');
+  var wait = add('Thinking…', 'ai');
+  try {
+    var ctxText = await getContext();
+    var msgs = [{ role: 'system', content: SYS }]
+      .concat(history.slice(-6))
+      .concat([{ role: 'user', content: ctxText + '\nRequest: ' + q }]);
+    var r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({
+        model: localStorage.getItem('odethModel') || 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        messages: msgs
+      })
+    });
+    var j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+    var reply = (j.choices && j.choices[0] && j.choices[0].message.content) || '';
+    history.push({ role: 'user', content: q }, { role: 'assistant', content: reply });
+    wait.remove();
+    render(reply);
+  } catch (e) {
+    wait.textContent = 'Error: ' + e.message;
+  }
+}
+
+function isAction(l) { return /^(SET|TABLE|FORMAT|AUTOFIT|SHEET)\|/.test(l); }
+
+function render(reply) {
+  var text = [], acts = [];
+  reply.split(/\r?\n/).forEach(function (raw) {
+    var l = raw.trim();
+    if (!l || l.indexOf('```') === 0 || /^SOURCE:/i.test(l)) return;
+    l = l.replace(/^\*\*|\*\*$/g, '');
+    if (isAction(l)) acts.push(l); else text.push(raw);
+  });
+  var d = add(text.join('\n').trim() || (acts.length ? 'Proposed changes:' : ''), 'ai');
+  if (!acts.length) return;
+  var box = document.createElement('div');
+  box.className = 'acts';
+  box.textContent = acts.join('\n');
+  d.appendChild(box);
+  var b = document.createElement('button');
+  b.className = 'apply';
+  b.textContent = 'Apply ' + acts.length + ' change(s)';
+  b.onclick = function () { b.disabled = true; applyActions(acts, d); };
+  d.appendChild(b);
+}
+
+function getSheet(ctx, name) {
+  return name ? ctx.workbook.worksheets.getItem(name) : ctx.workbook.worksheets.getActiveWorksheet();
+}
+
+function cellValue(v) {
+  if (typeof v !== 'string') return v;
+  if (v.charAt(0) === '=') return v;
+  if (v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+  return v;
+}
+
+async function applyActions(acts, host) {
+  var n = 0, errs = [];
+  await Excel.run(async function (ctx) {
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i], p = a.split('|');
+      try {
+        if (p[0] === 'SET') {
+          var rg = getSheet(ctx, p[1].trim()).getRange(p[2].trim());
+          var val = p.slice(3).join('|');
+          rg.formulas = [[cellValue(val)]];
+        } else if (p[0] === 'TABLE') {
+          var rows = JSON.parse(p.slice(3).join('|'));
+          var h = rows.length, w = Math.max.apply(null, rows.map(function (r) { return r.length; }));
+          rows = rows.map(function (r) {
+            var o = r.map(cellValue);
+            while (o.length < w) o.push('');
+            return o;
+          });
+          var ws = getSheet(ctx, p[1].trim());
+          ws.getRange(p[2].trim()).getResizedRange(h - 1, w - 1).formulas = rows;
+        } else if (p[0] === 'FORMAT') {
+          var fr = getSheet(ctx, (p[1] || '').trim()).getRange(p[2].trim());
+          fr.load('rowCount,columnCount');
+          await ctx.sync();
+          if ((p[3] || '').trim() === '1') fr.format.font.bold = true;
+          if ((p[3] || '').trim() === '0') fr.format.font.bold = false;
+          var hx = (p[4] || '').trim();
+          if (/^#?[0-9a-fA-F]{6}$/.test(hx)) fr.format.fill.color = hx.charAt(0) === '#' ? hx : '#' + hx;
+          var nf = (p[5] || '').trim();
+          if (nf) {
+            var arr = [];
+            for (var r = 0; r < fr.rowCount; r++) {
+              var row = [];
+              for (var c = 0; c < fr.columnCount; c++) row.push(nf);
+              arr.push(row);
+            }
+            fr.numberFormat = arr;
+          }
+        } else if (p[0] === 'AUTOFIT') {
+          getSheet(ctx, (p[1] || '').trim()).getRange(p[2].trim()).format.autofitColumns();
+        } else if (p[0] === 'SHEET') {
+          var act = p[1].trim().toLowerCase(), nm = p.slice(2).join('|').trim();
+          if (act === 'create') {
+            var ex = ctx.workbook.worksheets.getItemOrNullObject(nm);
+            await ctx.sync();
+            if (ex.isNullObject) ctx.workbook.worksheets.add(nm);
+          } else if (act === 'switch') {
+            ctx.workbook.worksheets.getItem(nm).activate();
+          }
+        }
+        await ctx.sync();
+        n++;
+      } catch (e) {
+        errs.push(a.slice(0, 60) + ' → ' + e.message);
+      }
+    }
+  });
+  var m = document.createElement('div');
+  m.textContent = 'Applied ' + n + ' change(s).' + (errs.length ? '\nFailed:\n' + errs.join('\n') : '');
+  m.style.marginTop = '8px';
+  m.style.whiteSpace = 'pre-wrap';
+  host.appendChild(m);
+}
+
+$('q').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
+if (!localStorage.getItem('odethKey')) $('cfg').classList.remove('hidden');
+$('model').value = localStorage.getItem('odethModel') || 'llama-3.3-70b-versatile';
+</script>
+</body>
+</html>

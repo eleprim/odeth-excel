@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+
+  <Id>8f3c1b2e-5a47-4d9e-b6a1-2c7e9d0f4a13</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Odeth</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Odeth"/>
+  <Description DefaultValue="AI accounting assistant for Excel"/>
+  <IconUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-80.png"/>
+  <SupportUrl DefaultValue="https://YOURUSER.github.io/odeth-excel/"/>
+
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://YOURUSER.github.io/odeth-excel/index.html"/>
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="OdethGroup">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="OdethButton">
+                  <Label resid="Btn.Label"/>
+                  <Supertip>
+                    <Title resid="Btn.Label"/>
+                    <Description resid="Btn.Tip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>OdethPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://YOURUSER.github.io/odeth-excel/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://YOURUSER.github.io/odeth-excel/index.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Group.Label" DefaultValue="Odeth"/>
+        <bt:String id="Btn.Label" DefaultValue="Odeth"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Btn.Tip" DefaultValue="Open the Odeth accounting assistant"/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
